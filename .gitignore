@@ -1,0 +1,4 @@
+data/test_data/
+data/training_data/
+runs/
+*.pyc

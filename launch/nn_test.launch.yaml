@@ -1,0 +1,18 @@
+launch:
+  - node:
+      pkg: "magnav_nn_sim"
+      exec: "magnav_nn_node"
+      output: "screen"
+      param:
+      -
+        name: "robot_namespace"
+        value: "leo"
+      -
+        name: "data_type"
+        value: "simplePath_lidar_off"
+      -
+        name: "lidar"
+        value: 0
+      -
+        name: "model_path"
+        value: "/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/models/11202024_model_v3.pth"
