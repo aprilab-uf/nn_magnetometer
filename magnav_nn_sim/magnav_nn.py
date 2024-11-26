@@ -21,7 +21,7 @@ class SimpleNN(nn.Module):
         self.layer2 = nn.Linear(512, 512)
         self.layer3 = nn.Linear(512, 512)
         self.layer4 = nn.Linear(512, 128)
-        self.layer5 = nn.Linear(128, output_dim)
+        self.output = nn.Linear(128, output_dim)
         self.scale = np.array([])
         self.dropout = nn.Dropout(0.3)
 
@@ -36,9 +36,8 @@ class SimpleNN(nn.Module):
         x = F.relu(self.layer3(x))
         x = self.dropout(x)
         x = F.relu(self.layer4(x))
-        x = self.layer5(x)
+        x = self.output(x)
         return x
-
 
     # def forward(self, x):
     #     x = torch.relu(self.layer1(x))
@@ -88,8 +87,8 @@ class TrainData:
 
     def flatten_data_to_array(self, data_path):
         with open(
-        data_path,
-        "r",
+            data_path,
+            "r",
         ) as f:
             data = json.load(f)
         flattened_data = []
@@ -113,7 +112,7 @@ class TrainData:
                 entry["true_magnetic_magnitude"] - b_e[0],  # Magnetic magnitude
                 # pose[0], # Position X
                 # pose[1], # Position Y
-                pose[2], # Orientation Yaw
+                pose[2],  # Orientation Yaw
                 odom[0],  # odom Linear velocity x
                 odom[1],  # odom Linear velocity y
                 odom[2],  # odom Linear velocity z
@@ -143,7 +142,7 @@ class TrainData:
     def train(self, data, output=False, output_name=""):
         output_path = f"data/models/{output_name}.pth"
         timestamp = datetime.now().strftime("%d%m%yT%H%M%S")
-        writer = SummaryWriter(f'runs/{timestamp}_{output_name}')
+        writer = SummaryWriter(f"runs/{timestamp}_{output_name}")
         X = data[:, 1:]  # All columns except magnetic_magnitude
         y = data[:, 0]  # Magnetic magnitude is the target
 
@@ -167,10 +166,14 @@ class TrainData:
         x_noise_std = 0.01  # Standard deviation of the noise
         y_noise_std = 0.01  # Standard deviation for noise in the target
 
-        x_noise = torch.normal(mean=noise_mean, std=x_noise_std, size=X_tensor.size())  # Gaussian noise
-        y_noise = torch.normal(mean=0, std=y_noise_std, size=y_tensor.size())  # Gaussian noise
+        x_noise = torch.normal(
+            mean=noise_mean, std=x_noise_std, size=X_tensor.size()
+        )  # Gaussian noise
+        y_noise = torch.normal(
+            mean=0, std=y_noise_std, size=y_tensor.size()
+        )  # Gaussian noise
         y_noisy = y_tensor + y_noise  # Add the noise to the target
-        X_noisy = X_tensor + x_noise 
+        X_noisy = X_tensor + x_noise
         # Create a DataLoader for batching
         batch_size = 32
         # dataset = TensorDataset(X_tensor, y_tensor)
@@ -188,9 +191,8 @@ class TrainData:
         # Loss Function (Mean Average Error for regression)
         criterion = nn.MSELoss()
 
-
         # Optimizer (Adam optimizer)
-        optimizer = optim.Adam(model.parameters(), lr=0.001,weight_decay=1e-5)
+        optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
 
         # Training loop
         num_epochs = 50
@@ -218,11 +220,11 @@ class TrainData:
                 running_loss += np.sqrt(loss.detach().cpu().numpy())
 
             # Print the loss after each epoch
-            loss_nt = scaler_y.inverse_transform((running_loss/len(train_loader)).reshape((1,-1))).item()
-            print(
-                f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss_nt:.4f}"
-            )
-            writer.add_scalar("Loss/Train",loss_nt,epoch)
+            loss_nt = scaler_y.inverse_transform(
+                (running_loss / len(train_loader)).reshape((1, -1))
+            ).item()
+            print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss_nt:.4f}")
+            writer.add_scalar("Loss/Train", loss_nt, epoch)
         writer.close()
         if output:
             torch.save(
@@ -236,7 +238,9 @@ class TrainData:
 
         # Evaluate the model
 
-    def eval(self, data, model_path =''):
+    def eval(self, data, NNSize, model_path="", save_data=False):
+        last_part = model_path.split("/")[-1]
+        timestamp = datetime.now().strftime("%d%m%yT%H%M%S")
         # Load the model, scalers
         if not model_path:
             raise Exception("Model Path Cannot be empty")
@@ -244,7 +248,7 @@ class TrainData:
             model_path,
             map_location=self.device,
         )
-        model = SimpleNN(20, 1)
+        model = SimpleNN(NNSize, 1)
         model.load_state_dict(checkpoint["model_state_dict"])
         self.scaler_X = checkpoint["scaler_X"]
         self.scaler_y = checkpoint["scaler_y"]
@@ -280,13 +284,18 @@ class TrainData:
             print(f"Mean Absolute Error (MAE): {mae:.4f}")
             steps = np.arange(0, len(predictions_rescaled[:, 0]), 1)
             plt.figure()
-            plt.plot(steps, predictions_rescaled[:, 0], "r--", label='Predictions')
-            plt.plot(steps, true_values_rescaled[:, 0], "b--", label = 'Truth')
+            plt.plot(steps, predictions_rescaled[:, 0], "r--", label="Predictions")
+            plt.plot(steps, true_values_rescaled[:, 0], "b--", label="Truth")
             plt.legend()
             plt.show()
             plt.figure()
-            plt.plot(steps,true_values_rescaled[:,0]-predictions_rescaled[:,0])
+            plt.plot(steps, true_values_rescaled[:, 0] - predictions_rescaled[:, 0])
             plt.show()
+            if save_data:
+                np.save(
+                    f"{timestamp}_{last_part}.predicitons_data.npy",
+                    np.hstack((steps, true_values_rescaled[:,0], predictions_rescaled[:,0])),
+                )
 
             print("Predictions vs True Values (scaled back to original):")
             for pred, true in zip(
@@ -298,18 +307,18 @@ class TrainData:
         # Scale the data using StandardScaler
         scaler = StandardScaler()
         data = scaler.fit_transform(data)
-        
+
         magnetic_magnitudes = data[:, 0]  # All rows, first column (magnetic magnitude)
 
         # Extract the other fields (all columns except the first)
         other_entries = data[:, 1:]  # All rows, columns from 2 to 20
-        
+
         # Compute Spearman correlation between magnetic magnitude and each of the other fields
         correlations = []
         for i in range(other_entries.shape[1]):
             corr, _ = spearmanr(magnetic_magnitudes, other_entries[:, i])
             correlations.append(corr)
-        
+
         labels = [
             "Pose X",
             "Pose Y",
@@ -317,31 +326,35 @@ class TrainData:
             "Odom Linear Velocity x",  # odom Linear velocity x
             "Odom Linear Velocity y",  # odom Linear velocity y
             "Odom Linear Velocity z",  # odom Linear velocity z
-            "Odom Angular Velocity x", # odom Angular velocity x
-            "Odom Angular Velocity y", # odom Angular velocity y
-            "Odom Angular Velocity z", # odom Angular velocity z
-            "IMU Compass Heading 1",   # IMU compass heading (1)
-            "IMU Compass Heading 2",   # IMU compass heading (2)
-            "IMU Compass Heading 3",   # IMU compass heading (3)
-            "IMU Compass Heading 4",   # IMU compass heading (4)
-            "IMU Angular Velocity X", # IMU angular velocity X
-            "IMU Angular Velocity Y", # IMU angular velocity Y
-            "IMU Angular Velocity Z", # IMU angular velocity Z
-            "IMU Linear Acceleration X", # IMU linear acceleration X
-            "IMU Linear Acceleration Y", # IMU linear acceleration Y
-            "IMU Linear Acceleration Z", # IMU linear acceleration Z
-            "Battery Voltage",          # Battery voltage
-            "Battery Percentage",       # Battery percentage
-            "LiDar On/Off"              # LiDar On/Off
+            "Odom Angular Velocity x",  # odom Angular velocity x
+            "Odom Angular Velocity y",  # odom Angular velocity y
+            "Odom Angular Velocity z",  # odom Angular velocity z
+            "IMU Compass Heading 1",  # IMU compass heading (1)
+            "IMU Compass Heading 2",  # IMU compass heading (2)
+            "IMU Compass Heading 3",  # IMU compass heading (3)
+            "IMU Compass Heading 4",  # IMU compass heading (4)
+            "IMU Angular Velocity X",  # IMU angular velocity X
+            "IMU Angular Velocity Y",  # IMU angular velocity Y
+            "IMU Angular Velocity Z",  # IMU angular velocity Z
+            "IMU Linear Acceleration X",  # IMU linear acceleration X
+            "IMU Linear Acceleration Y",  # IMU linear acceleration Y
+            "IMU Linear Acceleration Z",  # IMU linear acceleration Z
+            "Battery Voltage",  # Battery voltage
+            "Battery Percentage",  # Battery percentage
+            "LiDar On/Off",  # LiDar On/Off
         ]
 
         # Plot the correlations using a bar plot
         plt.figure(figsize=(12, 6))
-        plt.bar(range(1, len(correlations) + 1), correlations, color='skyblue')
-        plt.xlabel('Data Entries')
-        plt.ylabel('Spearman Correlation')
-        plt.title('Spearman Correlation between Magnetic Interference and Other Entries')
-        plt.xticks(range(1, len(correlations) + 1), labels, rotation=90)  # Label the x-axis with meaningful names
+        plt.bar(range(1, len(correlations) + 1), correlations, color="skyblue")
+        plt.xlabel("Data Entries")
+        plt.ylabel("Spearman Correlation")
+        plt.title(
+            "Spearman Correlation between Magnetic Interference and Other Entries"
+        )
+        plt.xticks(
+            range(1, len(correlations) + 1), labels, rotation=90
+        )  # Label the x-axis with meaningful names
         plt.grid(True)
         plt.tight_layout()  # Ensure the labels fit without overlap
         plt.show()
@@ -359,30 +372,88 @@ def main():
     # Determine the device to use for training (CUDA or MPS or CPU)
     training = TrainData()
     # Load the data
-    
-    data1 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T154504_training_data_leo_figure8_lidar_off/leo_data.json")
-    data2 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T154745_training_data_leo_figure8flipped_lidar_off/leo_data.json")
-    data3 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T155024_training_data_leo_sinwave_lidar_off/leo_data.json")
-    data4 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T155301_training_data_leo_sinwaveflipped_lidar_off/leo_data.json")
-    data5 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T155829_training_data_leo_sinwaveflipped_lidar_on/leo_data.json")
-    data6 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V4.1_training/241124T094809_training_data_leo_manual_control_lidar_off/leo_data.json")
-    data7 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T160245_training_data_leo_figure8_lidar_on/leo_data.json")
-    data8 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T160446_training_data_leo_figure8flipped_lidar_on/leo_data.json")
-    data9 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/211124T124240_training_data_leo_lawnmower5_lidar_off/leo_data.json")
-    data10 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/211124T124840_training_data_leo_lawnmower5_lidar_on/leo_data.json")
-    data11 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/test_data/201124T165408_test_data_leo_highfreqSin_lidar_off/leo_test_data.json")
-    data12 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/test_data/201124T162736_test_data_leo_highfreqSin_lidar_on/leo_test_data.json")
-    data13 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/221124T135723_training_data_leo_lawnmower5_continous_lidar_off/leo_data.json")
+
+    data1 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T154504_training_data_leo_figure8_lidar_off/leo_data.json"
+    )
+    data2 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T154745_training_data_leo_figure8flipped_lidar_off/leo_data.json"
+    )
+    data3 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T155024_training_data_leo_sinwave_lidar_off/leo_data.json"
+    )
+    data4 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T155301_training_data_leo_sinwaveflipped_lidar_off/leo_data.json"
+    )
+    data5 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T155829_training_data_leo_sinwaveflipped_lidar_on/leo_data.json"
+    )
+    data6 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V4.1_training/241124T094809_training_data_leo_manual_control_lidar_off/leo_data.json"
+    )
+    data7 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T160245_training_data_leo_figure8_lidar_on/leo_data.json"
+    )
+    data8 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T160446_training_data_leo_figure8flipped_lidar_on/leo_data.json"
+    )
+    data9 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/211124T124240_training_data_leo_lawnmower5_lidar_off/leo_data.json"
+    )
+    data10 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/211124T124840_training_data_leo_lawnmower5_lidar_on/leo_data.json"
+    )
+    data11 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/test_data/201124T165408_test_data_leo_highfreqSin_lidar_off/leo_test_data.json"
+    )
+    data12 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/test_data/201124T162736_test_data_leo_highfreqSin_lidar_on/leo_test_data.json"
+    )
+    data13 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/221124T135723_training_data_leo_lawnmower5_continous_lidar_off/leo_data.json"
+    )
     # data14 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/221124T142204_training_data_leo_lawnmowerSplitY_continous_lidar_off/leo_data.json")
-    data15 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V4.1_training/241124T110327_training_data_leo_manual_control_lidar_off/leo_data.json")
-    data16 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V4.1_training/241124T113221_training_data_leo_manual_control_lidar_on/leo_data.json")
-    data17 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/test_data/211124T162931_test_data_leo_simplePath_lidar_off/leo_test_data.json")
-    data18 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V4.1_training/251124T092252_training_data_leo_manual_control_lidar_on/leo_data.json")
-    
-    data = np.vstack((data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data15,data16,data17))
+    data15 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V4.1_training/241124T110327_training_data_leo_manual_control_lidar_off/leo_data.json"
+    )
+    data16 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V4.1_training/241124T113221_training_data_leo_manual_control_lidar_on/leo_data.json"
+    )
+    data17 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/test_data/211124T162931_test_data_leo_simplePath_lidar_off/leo_test_data.json"
+    )
+    data18 = training.flatten_data_to_array(
+        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V4.1_training/251124T092252_training_data_leo_manual_control_lidar_on/leo_data.json"
+    )
+
+    data = np.vstack(
+        (
+            data1,
+            data2,
+            data3,
+            data4,
+            data5,
+            data6,
+            data7,
+            data8,
+            data9,
+            data10,
+            data11,
+            data12,
+            data13,
+            data15,
+            data16,
+            data17,
+            data18,
+        )
+    )
     print(data.shape)
-    training.train(data, output=True, output_name="mag_nn_model_v4.1.8")
-    training.eval(data,model_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/models/mag_nn_model_v4.1.8.pth")
+    # training.train(data, output=True, output_name="mag_nn_model_v4.1.8")
+    training.eval(
+        data,
+        NNSize=20,
+        model_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/models/mag_nn_model_v4.1.8.pth",
+    )
     # training.plot_correlation(data)
 
 
