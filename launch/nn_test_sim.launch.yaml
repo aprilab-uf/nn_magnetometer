@@ -1,15 +1,15 @@
 launch:
   - node:
       pkg: "magnav_nn_sim"
-      exec: "magnav_nn_node"
+      exec: "magnav_nn_sim"
       output: "screen"
       param:
       -
         name: "robot_namespace"
-        value: "leo"
+        value: "robot"
       -
         name: "data_type"
-        value: "sim_compare_lab"
+        value: "sim_compare_issac"
       -
         name: "lidar"
         value: 0
@@ -24,7 +24,7 @@ launch:
         param:
         -
             name: "robot_namespace"
-            value: "leo"
+            value: "robot"
         -
             name: "stanley_gain"
             value: 0.001

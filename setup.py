@@ -20,6 +20,9 @@ setup(
     license="MIT",
     tests_require=["pytest"],
     entry_points={
-        "console_scripts": ["magnav_nn_node = magnav_nn_sim.magnav_nn_node:main"],
+        "console_scripts": [
+            "magnav_nn_node = magnav_nn_sim.magnav_nn_node:main",
+            "magnav_nn_sim = magnav_nn_sim.magnav_nn_sim:main",
+        ],
     },
 )

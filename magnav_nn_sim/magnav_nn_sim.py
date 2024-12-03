@@ -35,7 +35,7 @@ class Frame:
     nn_magnetic_magnitude: float
     map_magnetic_magnitude: float
     pose_data: tuple[float, float, float]
-    vector_field: tuple[float, float, float]
+    # vector_field: tuple[float, float, float]
     odom: tuple[float, float, float, float, float, float]
     imu_data: tuple[
         tuple[float, float, float],
@@ -52,7 +52,7 @@ ENTRIES = (
     "nn_magnetic_magnitude",
     "map_magnetic_magnitude",
     "pose_data",
-    "vector_field",
+    # "vector_field",
     "odom",
     "imu_data",
     "battery_data",
@@ -97,16 +97,14 @@ class NNMagnetometer(Node):
             Odometry, f"/{self.robot_namespace}/odom", self.cmd_vel_callback, 10
         )
         self.imu_sub = self.create_subscription(Imu, f"/{self.robot_namespace}/imu", self.imu_callback, 10)
-        self.battery_state_sub = self.create_subscription(
-            BatteryState, f"/{self.robot_namespace}/battery_state", self.battery_state_callback, 10
+        self.mag_intensity_pub = self.create_publisher(
+            MagneticField, f"/{self.robot_namespace}/qtfm/magnitude", 10
         )
-        self.mag_intensity_sub = self.create_subscription(
-            MagneticField, f"/{self.robot_namespace}/qtfm/magnitude", self.magnitude_callback, 10
-        )
-        self.mag_vector_sub = self.create_subscription(
-            MagneticField, f"/{self.robot_namespace}/qtfm/field", self.field_callback, 10
-        )
+        self.battery_timer = self.create_timer(2,self.battery_state_callback)
+        self.mag_timer = self.create_timer(1/135,self.magnitude_callback)
         self.i = 0
+        self.battery_percentage = 0.67
+        self.battery_decrement = 0.01
         lidar = self.declare_parameter("lidar",0).value
         self.current_frame.lidar = lidar
 
@@ -139,9 +137,9 @@ class NNMagnetometer(Node):
         self.current_frame.timestamp = timestamp
         self.save_data()
 
-    def magnitude_callback(self, msg):
+    def magnitude_callback(self):
         timestamp = time.time()
-        self.current_frame.true_magnetic_magnitude = msg.magnetic_field.x
+        self.current_frame.true_magnetic_magnitude =0.0 
         self.current_frame.timestamp = timestamp
         self.current_frame.nn_magnetic_magnitude = 0.0
         self.current_frame.map_magnetic_magnitude = 0.0
@@ -196,16 +194,9 @@ class NNMagnetometer(Node):
             msg.pose.position.y,
             quaternion_to_euler(msg.pose.orientation.z, msg.pose.orientation.w),
         )
-
-    def field_callback(self, msg):
-        timestamp = time.time()
-        self.current_frame.vector_field = (
-            msg.magnetic_field.x,
-            msg.magnetic_field.y,
-            msg.magnetic_field.z,
-        )
         self.current_frame.timestamp = timestamp
         self.save_data()
+
 
     def imu_callback(self, msg):
         timestamp = time.time()
@@ -226,9 +217,10 @@ class NNMagnetometer(Node):
         self.current_frame.timestamp = timestamp
         self.save_data()
 
-    def battery_state_callback(self, msg):
+    def battery_state_callback(self):
         timestamp = time.time()
-        self.current_frame.battery_data = (msg.voltage, msg.current, msg.percentage)
+        self.battery_percentage -= self.battery_decrement
+        self.current_frame.battery_data = (np.random.normal(14.55,0.02), 1.0, self.battery_percentage)
         self.current_frame.timestamp = timestamp
         self.save_data()
 

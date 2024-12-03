@@ -247,6 +247,7 @@ class TrainData:
         checkpoint = torch.load(
             model_path,
             map_location=self.device,
+            weights_only=False
         )
         model = SimpleNN(NNSize, 1)
         model.load_state_dict(checkpoint["model_state_dict"])
@@ -280,28 +281,35 @@ class TrainData:
             true_values_rescaled = self.scaler_y.inverse_transform(
                 y_tensor.cpu().numpy()
             )
+            naive_predictions = 366.6620 * np.ones_like(predictions_rescaled)
             mae = np.mean(np.abs(predictions_rescaled - true_values_rescaled))
-            print(f"Mean Absolute Error (MAE): {mae:.4f}")
+            naive_mae = np.mean(np.abs(naive_predictions - true_values_rescaled))
+            print(f"Neural Network Mean Absolute Error (MAE): {mae:.4f}")
+            print(f"Naive Mean MAE: {naive_mae}")
             steps = np.arange(0, len(predictions_rescaled[:, 0]), 1)
             plt.figure()
             plt.plot(steps, predictions_rescaled[:, 0], "r--", label="Predictions")
             plt.plot(steps, true_values_rescaled[:, 0], "b--", label="Truth")
             plt.legend()
-            plt.show()
+            plt.savefig("figs/SVG/predictions.svg")
+            plt.savefig("figs/PDF/predictions.pdf")
+            # plt.show()
             plt.figure()
             plt.plot(steps, true_values_rescaled[:, 0] - predictions_rescaled[:, 0])
-            plt.show()
+            plt.savefig("figs/SVG/error.svg")
+            plt.savefig("figs/PDF/error.pdf")
+            # plt.show()
             if save_data:
                 np.save(
                     f"{timestamp}_{last_part}.predicitons_data.npy",
-                    np.hstack((steps, true_values_rescaled[:,0], predictions_rescaled[:,0])),
+                    np.array([steps, true_values_rescaled[:,0], predictions_rescaled[:,0]]),
                 )
 
-            print("Predictions vs True Values (scaled back to original):")
-            for pred, true in zip(
-                predictions_rescaled[:10], true_values_rescaled[:10]
-            ):  # Show first 10 predictions and true values
-                print(f"Pred: {pred[0]:.4f}, True: {true[0]:.4f}")
+            # print("Predictions vs True Values (scaled back to original):")
+            # for pred, true in zip(
+            #     predictions_rescaled[:10], true_values_rescaled[:10]
+            # ):  # Show first 10 predictions and true values
+            #     print(f"Pred: {pred[0]:.4f}, True: {true[0]:.4f}")
 
     def plot_correlation(self, data):
         # Scale the data using StandardScaler
@@ -345,20 +353,19 @@ class TrainData:
         ]
 
         # Plot the correlations using a bar plot
-        plt.figure(figsize=(12, 6))
-        plt.bar(range(1, len(correlations) + 1), correlations, color="skyblue")
-        plt.xlabel("Data Entries")
-        plt.ylabel("Spearman Correlation")
-        plt.title(
-            "Spearman Correlation between Magnetic Interference and Other Entries"
-        )
+        plt.figure(figsize=(18, 9))
+        plt.bar(range(1, len(correlations) + 1), correlations, color="blue")
+        plt.xlabel("Data Entries",fontsize = 18)
+        plt.ylabel("Spearman Correlation",fontsize = 18)
         plt.xticks(
             range(1, len(correlations) + 1), labels, rotation=90
-        )  # Label the x-axis with meaningful names
+        ,fontsize = 18)  # Label the x-axis with meaningful names
+        plt.yticks(fontsize = 18)
         plt.grid(True)
         plt.tight_layout()  # Ensure the labels fit without overlap
         plt.show()
-
+        plt.savefig(f"figs/SVG/SpearmanCorrelation.svg",dpi = 300,pad_inches = 0.0)
+        plt.savefig(f"figs/PDF/SpearmanCorrelation.pdf",dpi = 300,pad_inches = 0.0)
     @staticmethod
     def wrap_angle(angle):
         # Wrap the angle between 0 and 360 degrees
@@ -369,91 +376,26 @@ class TrainData:
 
 
 def main():
+    import glob
+
     # Determine the device to use for training (CUDA or MPS or CPU)
     training = TrainData()
+
     # Load the data
-
-    data1 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T154504_training_data_leo_figure8_lidar_off/leo_data.json"
-    )
-    data2 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T154745_training_data_leo_figure8flipped_lidar_off/leo_data.json"
-    )
-    data3 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T155024_training_data_leo_sinwave_lidar_off/leo_data.json"
-    )
-    data4 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T155301_training_data_leo_sinwaveflipped_lidar_off/leo_data.json"
-    )
-    data5 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T155829_training_data_leo_sinwaveflipped_lidar_on/leo_data.json"
-    )
-    data6 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V4.1_training/241124T094809_training_data_leo_manual_control_lidar_off/leo_data.json"
-    )
-    data7 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T160245_training_data_leo_figure8_lidar_on/leo_data.json"
-    )
-    data8 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/201124T160446_training_data_leo_figure8flipped_lidar_on/leo_data.json"
-    )
-    data9 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/211124T124240_training_data_leo_lawnmower5_lidar_off/leo_data.json"
-    )
-    data10 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/211124T124840_training_data_leo_lawnmower5_lidar_on/leo_data.json"
-    )
-    data11 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/test_data/201124T165408_test_data_leo_highfreqSin_lidar_off/leo_test_data.json"
-    )
-    data12 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/test_data/201124T162736_test_data_leo_highfreqSin_lidar_on/leo_test_data.json"
-    )
-    data13 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/221124T135723_training_data_leo_lawnmower5_continous_lidar_off/leo_data.json"
-    )
-    # data14 = training.flatten_data_to_array(data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V3_Training/221124T142204_training_data_leo_lawnmowerSplitY_continous_lidar_off/leo_data.json")
-    data15 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V4.1_training/241124T110327_training_data_leo_manual_control_lidar_off/leo_data.json"
-    )
-    data16 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V4.1_training/241124T113221_training_data_leo_manual_control_lidar_on/leo_data.json"
-    )
-    data17 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/test_data/211124T162931_test_data_leo_simplePath_lidar_off/leo_test_data.json"
-    )
-    data18 = training.flatten_data_to_array(
-        data_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/training_data/V4.1_training/251124T092252_training_data_leo_manual_control_lidar_on/leo_data.json"
-    )
-
-    data = np.vstack(
-        (
-            data1,
-            data2,
-            data3,
-            data4,
-            data5,
-            data6,
-            data7,
-            data8,
-            data9,
-            data10,
-            data11,
-            data12,
-            data13,
-            data15,
-            data16,
-            data17,
-            data18,
+    selection = ("*_leo_simplePath_lidar_on",)
+    data = np.ndarray((0, 21)) 
+    for filepath in sorted(sum((glob.glob(f"**/test_data/{select}/**/*.json", recursive=True) for select in selection), start=[])):
+        print(f"Loading {filepath}...")
+        # data = np.vstack([data, training.flatten_data_to_array(data_path=filepath)])
+        data = training.flatten_data_to_array(data_path=filepath)
+    
+        print(data.shape)
+        # training.train(data, output=True, output_name="mag_nn_model_v4.1.8")
+        training.eval(
+            data,
+            NNSize=20,
+            model_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/models/mag_nn_model_v4.1.8.pth",
         )
-    )
-    print(data.shape)
-    # training.train(data, output=True, output_name="mag_nn_model_v4.1.8")
-    training.eval(
-        data,
-        NNSize=20,
-        model_path="/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/models/mag_nn_model_v4.1.8.pth",
-    )
     # training.plot_correlation(data)
 
 

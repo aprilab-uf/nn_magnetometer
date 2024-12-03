@@ -1,4 +1,6 @@
 data/test_data/
 data/training_data/
+data/Test_predicitions
 runs/
+figs/
 *.pyc
