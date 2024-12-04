@@ -6,7 +6,10 @@
   <description>A package that implements a neural based magnetometer</description>
   <maintainer email="apenumarti@ufl.edu">Aditya Penumarti</maintainer>
   <license>MIT</license>
-
+  <exec_depend>python3-sklearn</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-pandas</exec_depend>
+  <exec_depend>python3-torch</exec_depend>
   <test_depend>ament_copyright</test_depend>
 
   <export>

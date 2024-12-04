@@ -11,6 +11,10 @@ setup(
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
         ("share/" + package_name + "/launch", glob("launch/*.launch.yaml")),
+        ("share/" + package_name + "/data/paths", glob("data/paths/*.csv")),
+        ("share/" + package_name + "/data/models", glob("data/models/*.pth")),
+        ("share/" + package_name + "/data/map", glob("data/map/*.csv")),
+        
     ],
     install_requires=["setuptools"],
     zip_safe=True,

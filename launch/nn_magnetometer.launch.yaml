@@ -4,8 +4,8 @@ launch:
       default: "robot"
 
   - node:
-      pkg: "magnav_nn_sim"
-      exec: "magnav_nn_sim"
+      pkg: "nn_magnetometer"
+      exec: "nn_magnetometer_node"
       output: "screen"
       param:
       -

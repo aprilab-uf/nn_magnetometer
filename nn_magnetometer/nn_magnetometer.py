@@ -5,6 +5,7 @@ import numpy as np
 import os
 import time
 from geometry_msgs.msg import PoseStamped
+from ament_index_python.packages import get_package_share_directory
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu, BatteryState, MagneticField
 from scipy.interpolate import RegularGridInterpolator
@@ -67,10 +68,12 @@ class NNMagnetometer(Node):
         super().__init__("raph_subscriber")
         # Get the parameters
         self.robot_namespace = self.declare_parameter("robot_namespace","robot").value # The robot namespace
-        model_path = self.declare_parameter("model_name","nn_magnetometer_model_v0.0.1.pth").value # The path to the model
+        model_name = self.declare_parameter("model_name","nn_magnetometer_model_v0.0.1.pth").value # The path to the model
         self.save_json = self.declare_parameter("save_json",False).value # Whether to save the data to a JSON file
         self.sim = self.declare_parameter("is_sim",True).value # Whether the robot is in simulation
         data_type = self.declare_parameter("data_type","").value
+        self.package_share_directory = get_package_share_directory("nn_magnetometer")
+        model_path = self.package_share_directory + "/data/models/" + model_name
 
         # Initialize the model and the device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -273,7 +276,7 @@ class NNMagnetometer(Node):
         self.current_frame.timestamp = timestamp
         self.save_data()
    
-    def get_flattened_array():
+    def get_flattened_array(self):
         """Get the flattened array of the data frame"""
 
         pose = list(self.current_frame.pose_data)
@@ -307,19 +310,19 @@ class NNMagnetometer(Node):
     def interpolate_map(self):
         """Interpolate the magnetic field map"""
         ninety_map = np.loadtxt(
-            "/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/map/90_map.csv",
+            self.package_share_directory+"/data/map/90_map.csv",
             delimiter=",",
         )
         zero_map = np.loadtxt(
-            "/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/map/0_map.csv",
+            self.package_share_directory+"/data/map/0_map.csv",
             delimiter=",",
         )
         oneeighty_map = np.loadtxt(
-            "/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/map/180_map.csv",
+            self.package_share_directory+"/data/map/180_map.csv",
             delimiter=",",
         )
         twoseventy_map = np.loadtxt(
-            "/home/basestation/magnav_sim_ws/src/magnav_nn_sim/data/map/270_map.csv",
+            self.package_share_directory+"/data/map/270_map.csv",
             delimiter=",",
         )
         self.map = np.vstack(
@@ -351,16 +354,17 @@ class NNMagnetometer(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = NNMagnetometer()
-    with open(node.filename, "w") as f:
-        f.write("[\n")
-
+    if node.save_json:
+        with open(node.filename, "w") as f:
+            f.write("[\n")
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
-        with open(node.filename, "r+") as f:
-            pos = f.seek(0, 2)
-            f.seek(pos - 2)
-            f.write("]")
+        if node.save_json:
+            with open(node.filename, "r+") as f:
+                pos = f.seek(0, 2)
+                f.seek(pos - 2)
+                f.write("]")
         pass
     finally:
         node.destroy_node()
