@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 from glob import glob
 
-package_name = "magnav_nn_sim"
+package_name = "nn_magnetometer"
 
 setup(
     name=package_name,
@@ -14,15 +14,15 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer="basestation",
-    maintainer_email="basestation@todo.todo",
-    description="TODO: Package description",
+    maintainer="Aditya Penumarti",
+    maintainer_email="apenumarti@ufl.edu",
+    description="A package for a neural based magnetometer",
     license="MIT",
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "magnav_nn_node = magnav_nn_sim.magnav_nn_node:main",
-            "magnav_nn_sim = magnav_nn_sim.magnav_nn_sim:main",
+            "nn_magnetometer_node = nn_magnetometer.nn_magnetometer:main",
+            "path_follower_node = nn_magnetometer.path_follower:main",
         ],
     },
 )

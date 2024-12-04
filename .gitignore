@@ -4,3 +4,4 @@ data/Test_predicitions
 runs/
 figs/
 *.pyc
+.vscode/

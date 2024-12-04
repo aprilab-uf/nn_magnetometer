@@ -1,93 +1,74 @@
-# MagNav NN Simulator
+# Neural Network-Based Magnetometer
+
+The package given here implements a neural network based model for public availability to the wider research community. The network is modeled on a ClearPath TurtleBot4 robot, and therefore a companion digital twin is implemented at this [Github Repo](https://github.com/aditya-penumarti/magnav_isaac_sim). This README outlines how to run the the neural based magnetometer for the system.
+
+## Installing the package
+
+To install the package you must `git clone` the repository into your workspace. This can be done as follows:
+
+````bash
+mkdir -p nn_magnetometer_ws/src && cd nn_magnetometer_ws/src
+git clone https://github.com/aprilab-uf/nn_magnetometer
+cd ../
+colcon build --symlink-install
+````
+
+This will clone and build the package into the workspace. Do remember to source the workspace once you are done building to ensure you can see the package nodes. To run the magnetometer and a path follower to test the performance of the NN-based magnetometer run the following launch file (ensure the Isaac Sim environment is running live):
+
+````bash
+ros2 launch nn_magnetometer nn_test_sim.launch.yaml robot_namespace:="robot"
+````
+
+## `nn_magnetometer_node`
+
+To run the nn_magnetometer node, the easiest way is to run the launch file given. Some `{robot_namespace}` is required to namespace the topics. Make sure they are consistent between nodes you want to use. Once the package has been built you will have to have the following topics publishing:
+
+* `/{robot_namespace}/enu/pose`
+* `/{robot_namespace}/odom`
+* `/{robot_namespace}/imu`
+* `/{robot_namespace}/battery_state` - Only runs on the physical robot, so will not be published if running in Isaac Sim, ensure the parameter `sim` is set to `true`
+
+Then you can run the following to launch the node:
+
+````bash
+ros2 launch nn_magnetometer nn_magnetometer.launch.yaml robot_namespace:="<robot_name>"
+````
+
+An example for the `robot_name` is:
+
+````bash
+ros2 launch nn_magnetometer nn_magnetometer.launch.yaml robot_namespace:="robot"
+````
 
 
+Now if you check the ROS 2 topics being published you should see a `/robot/qtfm/field` topic show up. 
 
-## Getting started
+The following are the parameters and descriptions required for the node:
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+* `robot_namespace`  - The robot name to ensure the topics are namespaced appropriately. Default is `robot`.
+* `model_name` - The name of the models that are contained within the `data/models`. Default is `nn_magnetometer_model_v0.0.1.pth`.
+* `save_json` - Whether to save a JSON file that contains all the topics (subscribed and published) that the node receives. Default is `false`.
+* `sim` - Whether or not this is running in a simulation environment. Default is `true`.
+* `data_type` - The name of the data type for saving the JSON file. It helps distinguish between multiple runs.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## `path_follower_node`
 
-## Add your files
+Available in this package is also a path follower node that subscribes to a `/{robot_namespace}/enu/pose` topic and publishes a `/{robot_namespace}/cmd_vel` topic for a TurtleBot4. These topic conventions follow what is expected on a TurtleBot4. To run this path follower the following topics need to be subscriptable:
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+* `/{robot_namespace}/enu/pose`
 
-```
-cd existing_repo
-git remote add origin https://gitlab.com/aprilab-uf/projects/magnetic-navigation-methods/magnav_nn_sim.git
-git branch -M main
-git push -uf origin main
-```
+Then a launch file can be used to launch the path following node as follows:
 
-## Integrate with your tools
+````bash
+ros2 launch nn_magnetometer path_follower.launch.yaml robot_namespace:="<robot_name>"
+````
 
-- [ ] [Set up project integrations](https://gitlab.com/aprilab-uf/projects/magnetic-navigation-methods/magnav_nn_sim/-/settings/integrations)
+The following are the parameters and descriptions required for the node:
 
-## Collaborate with your team
+* `robot_namespace`  - The robot name to ensure the topics are namespaced appropriately. Default is `robot`.
+* `stanley_gain`  - The stanley gain of the controller. This gain controls how closely the robot follows a predefined path. Tune if the controller is oscillating. Default is `0.001`.
+* `linear_velocity` - The linear velocity of the TurtleBot4, i.e. `linear.x` field in the `Twist` for `/{robot_namespace}/cmd_vel`. Default is `0.2`.
+* `do_loop` - Whether the path should be executed continuously. Default is `false`.
+* `flip_path` - If you want to flip the path to execute a different path compared the predefined ones. Default is `false`.
+* `continuous` - Whether the path is continuous or not. This means does the path end and start connect, if not the program will flip the path and add it back to the original path. Default is `true`.
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.

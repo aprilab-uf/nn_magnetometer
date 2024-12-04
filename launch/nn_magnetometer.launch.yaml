@@ -1,0 +1,29 @@
+launch:
+  - arg:
+      name: "robot_namespace"
+      default: "robot"
+
+  - node:
+      pkg: "magnav_nn_sim"
+      exec: "magnav_nn_sim"
+      output: "screen"
+      param:
+      -
+        name: "robot_namespace"
+        value: "$(var robot_namespace)"
+      -
+        name: "lidar"
+        value: 0
+      -
+        name: "model_name"
+        value: "nn_magnetometer_model_v0.0.1.pth"
+      -
+        name: "data_type"
+        value: "sim_compare_issac"
+      -
+        name: "sim"
+        value: true
+      -
+        name: "save_json"
+        value: false
+

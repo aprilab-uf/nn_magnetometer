@@ -1,21 +1,7 @@
 launch:
-  - node:
-      pkg: "magnav_nn_sim"
-      exec: "magnav_nn_sim"
-      output: "screen"
-      param:
-      -
-        name: "robot_namespace"
-        value: "robot"
-      -
-        name: "lidar"
-        value: 0
-      -
-        name: "model_name"
-        value: "nn_magnetometer_model_v0.0.1.pth"
-      - 
-        name: "sim"
-        value: true
+  - arg:
+      name: "robot_namespace"
+      default: "robot"
 
   - node:
         pkg: "nn_magnetometer"
@@ -24,7 +10,7 @@ launch:
         param:
         -
             name: "robot_namespace"
-            value: "robot"
+            value: "$(var robot_namespace)"
         -
             name: "stanley_gain"
             value: 0.001
