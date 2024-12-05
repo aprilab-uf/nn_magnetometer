@@ -1,6 +1,6 @@
 # Neural Network-Based Magnetometer
 
-The package given here implements a neural network based model for public availability to the wider research community. The network is modeled on a ClearPath TurtleBot4 robot, and therefore a companion digital twin is implemented at this [Github Repo](https://github.com/aditya-penumarti/magnav_isaac_sim). This README outlines how to run the the neural based magnetometer for the system.
+The package given here implements a neural network based model for public availability to the wider research community. The network is modeled on a ClearPath TurtleBot4 robot, and therefore a companion digital twin is implemented at the [MagNav Isaac Sim Github Repo](https://github.com/aprilab-uf/magnav_isaac_sim.git). This README outlines how to run the the neural based magnetometer for the system.
 
 ## Installing the package
 
